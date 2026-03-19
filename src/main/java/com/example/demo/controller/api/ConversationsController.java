@@ -7,10 +7,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo.entity.Conversations;
 import com.example.demo.entity.MyResult;
 import com.example.demo.entity.dto.ConversationsDTO;
+import com.example.demo.entity.dto.SendMessageDTO;
 import com.example.demo.entity.vo.ConversationsVO;
 import com.example.demo.service.ConversationsService;
 import jakarta.annotation.Resource;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.Serializable;
 import java.util.List;
@@ -39,8 +42,8 @@ public class ConversationsController  {
      * @return 所有数据
      */
     @GetMapping
-    public void selectAll(Page<Conversations> page, Conversations conversations) {
-
+    public MyResult<List<ConversationsVO>> selectAll() {
+        return MyResult.success(conversationsService.selectAll());
     }
 
     /**
@@ -49,8 +52,8 @@ public class ConversationsController  {
      * @param id 主键
      * @return 单条数据
      */
-    @GetMapping("getByConversationId")
-    public MyResult<ConversationsVO> selectOne(@RequestParam("id") String id) {
+    @GetMapping("getByConversationId/{id}")
+    public MyResult<ConversationsVO> selectOne(@PathVariable("id") String id) {
         return MyResult.success(conversationsService.selectConversationInfo(id));
     }
 
@@ -62,6 +65,26 @@ public class ConversationsController  {
     public MyResult insert(@RequestBody ConversationsDTO dto) {
         return MyResult.success(conversationsService.createConversation(dto));
     }
+
+//
+//    /**
+//     * 对话 - 非流式
+//     */
+//    @PostMapping("{id}/messages")
+//    public MyResult sendMessage(@PathVariable("id") String id,@RequestBody SendMessageDTO dto) {
+//        return MyResult.success(conversationsService.sendMessage(id,dto));
+//    }
+
+    /**
+     * 对话 - 流式 (SSE)
+     * 根据 dto.isStream 判断是否使用流式响应
+     */
+    @PostMapping(value = "{id}/messages", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter sendMessageStream(@PathVariable("id") String id, @RequestBody SendMessageDTO dto) {
+        return conversationsService.sendMessageStream(id, dto);
+    }
+
+
 
     /**
      * 修改数据
@@ -80,9 +103,10 @@ public class ConversationsController  {
      * @param idList 主键结合
      * @return 删除结果
      */
-    @DeleteMapping
-    public void delete(@RequestParam("idList") List<Long> idList) {
-
+    @DeleteMapping("{id}")
+    public MyResult delete(@PathVariable("id") String id) {
+        conversationsService.delete(id);
+        return MyResult.success();
     }
 }
 

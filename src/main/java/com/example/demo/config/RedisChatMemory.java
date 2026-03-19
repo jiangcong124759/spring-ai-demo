@@ -43,7 +43,7 @@ public class RedisChatMemory implements ChatMemory, AutoCloseable {
 
         JedisPoolConfig poolConfig = new JedisPoolConfig();
 
-        this.jedisPool = new JedisPool(poolConfig, host, port, 2000, password);
+        this.jedisPool = new JedisPool(poolConfig, host, port, 20000, password);
         this.objectMapper = new ObjectMapper();
         logger.info("Connected to Redis at {}:{}", host, port);
     }
@@ -58,13 +58,31 @@ public class RedisChatMemory implements ChatMemory, AutoCloseable {
         try (Jedis jedis = jedisPool.getResource()) {
             // 使用pipeline批量操作提升性能
             var pipeline = jedis.pipelined();
-            messages.forEach(message ->
-                    pipeline.hset(key, String.valueOf(timestamp.getAndIncrement()), message.toString())
-            );
+            messages.forEach(message -> {
+                // 存储消息类型和内容的组合：type|content
+                String messageType = getMessageType(message);
+                String storedValue = messageType + "|" + message.getContent();
+                pipeline.hset(key, String.valueOf(timestamp.getAndIncrement()), storedValue);
+            });
             pipeline.sync();
         }
 
         logger.info("Added messages to conversationId: {}", conversationId);
+    }
+
+    /**
+     * 获取消息类型标识
+     */
+    private String getMessageType(Message message) {
+        if (message instanceof org.springframework.ai.chat.messages.UserMessage) {
+            return "user";
+        } else if (message instanceof org.springframework.ai.chat.messages.AssistantMessage) {
+            return "assistant";
+        } else if (message instanceof org.springframework.ai.chat.messages.SystemMessage) {
+            return "system";
+        } else {
+            return "unknown";
+        }
     }
 
     @Override
@@ -80,14 +98,37 @@ public class RedisChatMemory implements ChatMemory, AutoCloseable {
 
             return allMessages.entrySet().stream()
                     .sorted((e1, e2) ->
-                            Long.compare(Long.parseLong(e2.getKey()), Long.parseLong(e1.getKey()))
+                            Long.compare(Long.parseLong(e1.getKey()), Long.parseLong(e2.getKey()))
                     )
                     .limit(lastN)
-                    .map(entry -> new UserMessage(entry.getValue()))
+                    .map(entry -> createMessageFromStoredValue(entry.getValue()))
                     .collect(Collectors.toList());
         }
 
 
+    }
+
+    /**
+     * 根据存储的值创建对应类型的消息对象
+     * 存储格式：type|content
+     */
+    private Message createMessageFromStoredValue(String storedValue) {
+        if (storedValue == null || storedValue.isEmpty()) {
+            return new UserMessage("");
+        }
+
+        // 检查是否是新格式（以 user|、assistant|、system| 开头）
+        if (storedValue.startsWith("user|")) {
+            return new UserMessage(storedValue.substring(5));
+        } else if (storedValue.startsWith("assistant|")) {
+            return new org.springframework.ai.chat.messages.AssistantMessage(storedValue.substring(10));
+        } else if (storedValue.startsWith("system|")) {
+            return new org.springframework.ai.chat.messages.SystemMessage(storedValue.substring(7));
+        } else {
+            // 兼容旧数据，默认为用户消息
+            logger.debug("兼容旧数据格式，默认为用户消息: {}", storedValue);
+            return new UserMessage(storedValue);
+        }
     }
 
     @Override
