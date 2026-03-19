@@ -1,0 +1,57 @@
+spring:
+  data:
+    redis:
+      host: 45.207.195.224
+      port: 6378  # 例如：6379
+      password: a123456! # 如果没有密码，可以不选或留空
+  ai:
+    dashscope:
+      api-key: sk-7d7f10dc01684189bc11c13e41f87225
+      chat:
+        options:
+          model: qwen-max
+
+
+  datasource:
+    driver-class-name: org.sqlite.JDBC
+    url: jdbc:sqlite:my-knowledge-db
+    username:
+    password:
+    druid:
+
+## 为 AI 对话添加日志
+logging:
+  level:
+    org.springframework.ai.chat.client.advisor: debug
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  # 指定 mapper.xml 文件的位置（如果有的话）
+  # mapper-locations: classpath*:/mapper/**/*.xml
+  # 指定实体类包路径
+  type-aliases-package: com.example.demo.entity
+  configuration:
+    # 开启驼峰命名转换
+    map-underscore-to-camel-case: true
+    # 打印 SQL 日志
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      # 主键类型（根据你的实体类来定）
+      id-type: auto
+      # 逻辑删除字段值
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# OpenAPI/Swagger 配置
+openapi:
+  service:
+    url: http://localhost:8080
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
