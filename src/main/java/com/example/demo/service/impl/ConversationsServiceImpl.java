@@ -8,6 +8,7 @@ import com.example.demo.dao.ConversationsDao;
 import com.example.demo.entity.Conversations;
 import com.example.demo.entity.dto.ConversationsDTO;
 import com.example.demo.entity.vo.ConversationsVO;
+import com.example.demo.entity.vo.MessageVO;
 import com.example.demo.service.ConversationsService;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.Message;
@@ -53,11 +54,30 @@ public class ConversationsServiceImpl extends ServiceImpl<ConversationsDao, Conv
     @Override
     public ConversationsVO selectConversationInfo(String id) {
         Conversations conversations = this.getById(id);
+        if (conversations == null) {
+            return null;
+        }
         ConversationsVO conversationsVO = BeanUtil.toBean(conversations, ConversationsVO.class);
         //获取会话记录
         List<Message> messages = redisChatMemory.get(id, 5);
-        System.err.println(messages);
-        return null;
+        //将 Message 转换为 MessageVO
+        List<MessageVO> messageVOList = messages.stream()
+                .map(message -> {
+                    MessageVO messageVO = new MessageVO();
+                    messageVO.setContent(message.getContent());
+                    //根据消息类型设置角色
+                    if (message instanceof org.springframework.ai.chat.messages.UserMessage) {
+                        messageVO.setRole("user");
+                    } else if (message instanceof org.springframework.ai.chat.messages.AssistantMessage) {
+                        messageVO.setRole("assistant");
+                    } else {
+                        messageVO.setRole("system");
+                    }
+                    return messageVO;
+                })
+                .toList();
+        conversationsVO.setMessages(messageVOList);
+        return conversationsVO;
     }
 }
 
