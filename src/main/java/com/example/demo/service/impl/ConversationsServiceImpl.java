@@ -69,7 +69,7 @@ public class ConversationsServiceImpl extends ServiceImpl<ConversationsDao, Conv
         }
         ConversationsVO conversationsVO = BeanUtil.toBean(conversations, ConversationsVO.class);
         //获取会话记录
-        List<Message> messages = redisChatMemory.get(id, 5);
+        List<Message> messages = redisChatMemory.get(id, Integer.MAX_VALUE);
         //将 Message 转换为 MessageVO
         List<MessageVO> messageVOList = messages.stream()
                 .map(message -> {
