@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -23,29 +24,24 @@ public class RedisChatMemory implements ChatMemory, AutoCloseable {
 
     private static final String DEFAULT_KEY_PREFIX = "chat:";
 
-    private static final String DEFAULT_HOST = "45.207.195.224";
-
-    private static final int DEFAULT_PORT = 6378;
-
-    private static final String DEFAULT_PASSWORD = "a123456!";
-
     private final JedisPool jedisPool;
 
 
     private final ObjectMapper objectMapper;
 
-    public RedisChatMemory() {
-
-        this(DEFAULT_HOST, DEFAULT_PORT, DEFAULT_PASSWORD);
-    }
-
-    public RedisChatMemory(String host, int port, String password) {
+    public RedisChatMemory(
+            @Value("${spring.data.redis.host:127.0.0.1}") String host,
+            @Value("${spring.data.redis.port:6379}") int port,
+            @Value("${spring.data.redis.password:}") String password) {
 
         JedisPoolConfig poolConfig = new JedisPoolConfig();
+        poolConfig.setTestOnBorrow(true);
+        poolConfig.setTestWhileIdle(true);
 
-        this.jedisPool = new JedisPool(poolConfig, host, port, 20000, password);
+        String redisPassword = password.isEmpty() ? null : password;
+        this.jedisPool = new JedisPool(poolConfig, host, port, 20000, redisPassword);
         this.objectMapper = new ObjectMapper();
-        logger.info("Connected to Redis at {}:{}", host, port);
+        logger.info("Redis chat memory configured at {}:{}", host, port);
     }
 
     @Override
@@ -61,7 +57,7 @@ public class RedisChatMemory implements ChatMemory, AutoCloseable {
             messages.forEach(message -> {
                 // 存储消息类型和内容的组合：type|content
                 String messageType = getMessageType(message);
-                String storedValue = messageType + "|" + message.getContent();
+                String storedValue = messageType + "|" + message.getText();
                 pipeline.hset(key, String.valueOf(timestamp.getAndIncrement()), storedValue);
             });
             pipeline.sync();

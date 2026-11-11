@@ -1,6 +1,6 @@
 package com.example.demo.controller;
 
-import com.alibaba.dashscope.utils.JsonUtils;
+import cn.hutool.json.JSONUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,10 +49,10 @@ public class AiChatReturnEntityController {
     @Operation(summary = "文本聊天", description = "发送消息并获取 AI 回复的文本内容")
     @GetMapping(value = "/chat")
     public String chat(
-            @Parameter(description = "用户输入的消息", required = true) 
+            @Parameter(description = "用户输入的消息", required = true)
             @RequestParam String input) {
         ActorFilms entity = chatClient.prompt().user(input).call().entity(ActorFilms.class);
-        return JsonUtils.toJson(entity);
+        return JSONUtil.toJsonStr(entity);
     }
 
 

@@ -74,7 +74,7 @@ public class ConversationsServiceImpl extends ServiceImpl<ConversationsDao, Conv
         List<MessageVO> messageVOList = messages.stream()
                 .map(message -> {
                     MessageVO messageVO = new MessageVO();
-                    messageVO.setContent(message.getContent());
+                    messageVO.setContent(message.getText());
                     //根据消息类型设置角色
                     if (message instanceof org.springframework.ai.chat.messages.UserMessage) {
                         messageVO.setRole("user");

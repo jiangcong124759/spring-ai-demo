@@ -1,9 +1,8 @@
 spring:
   data:
     redis:
-      host: 45.207.195.224
-      port: 6378  # 例如：6379
-      password: a123456! # 如果没有密码，可以不选或留空
+      host: 127.0.0.1
+      port: 6379  # 例如：6379
   ai:
     dashscope:
       api-key: sk-7d7f10dc01684189bc11c13e41f87225
